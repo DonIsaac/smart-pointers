@@ -18,3 +18,11 @@ test:
 fmt:
     zig fmt src build.zig build.zig.zon
     typos -w
+
+watch cmd="check":
+    git ls-files | entr -c just run-clear {{cmd}}
+
+run-clear cmd:
+    @clear
+    zig build {{cmd}}
+

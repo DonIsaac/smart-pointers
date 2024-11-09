@@ -21,7 +21,7 @@ pub fn Arc(comptime T: type) type {
     }
 
     return struct {
-        /// **Don't access this directly.**
+        /// **DO NOT ACCESS THIS DIRECTLY**
         ///
         /// Why are you reading these docs? You shouldn't be looking at this
         /// field, much less touching it. If you touch this I'll banish you to
@@ -38,7 +38,26 @@ pub fn Arc(comptime T: type) type {
             };
         }
 
+        /// Borrow the value stored in this Arc.
         pub inline fn deref(self: Self) *const T {
+            return &self.__inner.value;
+        }
+
+        /// Mutably borrow the value stored in this Arc if no other references
+        /// exist to it.
+        pub inline fn derefMut(self: Self) ?*T {
+            return if (self.__inner.strong.load(.acquire) == 1)
+                &self.__inner.value
+            else
+                null;
+        }
+
+        /// Mutably borrow the value stored in this Arc.
+        ///
+        /// Mutating this when multiple references exist could cause undefined
+        /// behavior if consumers are expecting the contained value to remain
+        /// unchanged. Looking for a safe alternative? Try `derefMut()`.
+        pub inline fn derefMutUnsafe(self: Self) *T {
             return &self.__inner.value;
         }
 
@@ -60,47 +79,9 @@ pub fn Arc(comptime T: type) type {
             // was 1, is now 0
             if (strong_count == 1) {
                 const a = self.__inner.alloc;
-                self.deinitInner();
+                typeUtils.deinitInner(T, &self.__inner.value, a);
                 a.destroy(self.__inner);
                 self.__inner = undefined;
-            }
-        }
-
-        fn deinitInner(self: *Self) void {
-            switch (info) {
-                .Fn, .Void, .NoReturn, .Null, .EnumLiteral, .Undefined => unreachable,
-                .Pointer => return deinitPtr(info.Pointer, self.__inner.value, self.__inner.alloc),
-                .Bool, .Float, .Int => {}, // stored inline, nothing to free
-                .Optional => {
-                    const childInfo = @typeInfo(info.Optional.child);
-                    if (typeUtils.isPrimitive(childInfo)) return;
-                    if (childInfo == .Pointer) {
-                        if (self.__inner.value != null) {
-                            deinitPtr(childInfo.Pointer, self.__inner.value.?, self.__inner.alloc);
-                        }
-                        return;
-                    }
-                },
-                else => @panic("Please open an issue on Github and tell Don he's a dingus who forgot to handle Arc::deinit() for values of type '" ++ @typeName(T) ++ "'. Thanks!"),
-            }
-            // _ = inner;
-        }
-
-        fn deinitPtr(comptime ptr: Type.Pointer, target: anytype, alloc: Allocator) void {
-            if (ptr.is_const) return;
-
-            if (ptr.size == .Slice) {
-                alloc.free(target);
-                return;
-            }
-
-            switch (@typeInfo(ptr.child)) {
-                .Struct, .Union, .Enum => {
-                    if (@hasDecl(ptr.child, "deinit")) {
-                        target.deinit();
-                    }
-                },
-                else => {},
             }
         }
     };
@@ -169,4 +150,28 @@ test "Arc.deinit on primitive slices" {
         var ptr = try Arc(T).init(a, value);
         ptr.deinit();
     }
+}
+
+const Foo = struct {
+    a: Allocator,
+    x: u32,
+    y: *u32,
+
+    pub fn init(a: Allocator, x: u32, y: u32) Allocator.Error!Foo {
+        const y_ptr = try a.create(u32);
+        y_ptr.* = y;
+        return .{ .a = a, .x = x, .y = y_ptr };
+    }
+
+    pub fn deinit(self: *Foo) void {
+        self.a.destroy(self.y);
+    }
+};
+
+test "Arc.deinit on struct with deinit()" {
+    const a = std.testing.allocator;
+
+    const foo = try Foo.init(a, 1, 2);
+    var arc = try Arc(Foo).init(a, foo);
+    arc.deinit();
 }
