@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+    paths-ignore:
+      - "*.md"
+      - ".vscode/*"
+      - Justfile
+      - zls.json
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "*.md"
+      - ".vscode/*"
+      - Justfile
+      - zls.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  ZIG_VERSION: 0.13.0
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Install tooling
+      - uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      # Run checks
+      - run: just check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Install tooling
+      - uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      # Run checks
+      - run: just test
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Install tooling
+      - uses: extractions/setup-just@v2
+        with:
+          just-version: ${{ env.JUST_VERSION }}
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      # Run checks
+      - name: Spellcheck
+        uses: crate-ci/typos@v1.26.8
+      - name: zig fmt
+        run: zig fmt src build.zig build.zig.zon
