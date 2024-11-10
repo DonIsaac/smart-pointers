@@ -284,7 +284,8 @@ test "null initialization" {
 test "new borrowed from static string" {
     const alloc = std.testing.allocator;
     var boo = Boo([]const u8).static(alloc, "I'm a static string");
-    boo.deinit();
+    defer boo.deinit();
+    try expect(boo.isBorrowed());
     const b = boo.borrow();
     try std.testing.expectEqualStrings(std.mem.sliceTo("I'm a static string", 0), b);
 }

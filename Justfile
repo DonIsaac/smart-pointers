@@ -12,8 +12,15 @@ _default:
 check:
     zig build check -freference-trace
 
+build:
+    zig build --summary all -freference-trace --femit-docs
+
 test:
     zig build test --summary all -freference-trace
+
+docs:
+    zig build docs --summary new
+    npx http-server -p 3000 zig-out/docs
 
 fmt:
     zig fmt src build.zig build.zig.zon
