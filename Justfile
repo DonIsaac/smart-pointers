@@ -13,7 +13,7 @@ check:
     zig build check -freference-trace
 
 test:
-    zig build test --summary all
+    zig build test --summary all -freference-trace
 
 fmt:
     zig fmt src build.zig build.zig.zon

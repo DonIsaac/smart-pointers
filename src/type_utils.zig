@@ -2,7 +2,8 @@ const std = @import("std");
 const Type = std.builtin.Type;
 const Allocator = std.mem.Allocator;
 
-pub fn innerType(comptime ty: Type) Type {
+pub fn innerType(comptime T: type) Type {
+    const ty = @typeInfo(T);
     return switch (ty) {
         .Pointer => innerType(ty.Pointer.child),
         .Optional => innerType(ty.Optional.child),
