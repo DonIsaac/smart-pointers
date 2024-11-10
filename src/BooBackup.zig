@@ -1,3 +1,6 @@
+// I cannot, for the life of me, get slices to ~just work~
+// it's some problem or another and I CBF to fix this right now.
+
 const std = @import("std");
 const builtin = @import("builtin");
 const typeUtils = @import("type_utils.zig");
@@ -22,6 +25,90 @@ const assert = std.debug.assert;
 /// const bar = Foo([]const u8).fmt("foo {s} baz", .{"bar"});
 /// ```
 pub fn Boo(comptime T: type) type {
+    return if (T == []const u8 or T == []u8) BooStr else BooGeneric(T);
+}
+
+const BooStr = struct {
+    __repr: Repr,
+    len: usize,
+    alloc: Allocator,
+
+    const Self = BooStr;
+
+    pub fn fmt(alloc: Allocator, comptime fmt_str: []const u8, comptime args: anytype) Allocator.Error!Self {
+        const string = try std.fmt.allocPrint(alloc, fmt_str, args);
+        return Self{
+            .__repr = Repr.new(string.ptr, .Owned),
+            .len = string.len,
+            .alloc = alloc,
+        };
+    }
+
+    pub fn init(alloc: Allocator, value: []u8) Allocator.Error!Self {
+        return Self{
+            .__repr = Repr.new(value.ptr, .Owned),
+            .len = value.len,
+            .alloc = alloc,
+        };
+    }
+
+    // pub fn static(alloc: Allocator, comptime string: anytype) Self {
+    // pub fn static(alloc: Allocator, slice: []align(8) const u8) Self {
+    pub fn static(alloc: Allocator, comptime string: *align(8) const [*:0]u8) Self {
+        // const slice = asSlice(string);
+        @compileLog(string.*);
+        // const slice = string.*[0..string.ptr.len];
+        // const slice = string;
+        // const ptr = slice.ptr;
+        // assert(ptr % 8 == 0);
+        // return Self{
+        //     .__repr = Repr.new(slice.ptr, .Borrowed),
+        //     .len = slice.len,
+        //     .alloc = alloc,
+        // };
+        return Self{
+            .__repr = Repr.newNullBorrow(),
+            .len = 0,
+            .alloc = alloc,
+        };
+    }
+
+    fn asSlice(comptime arr: [:0]const u8) []const u8 {
+        return arr[0..arr.len];
+    }
+
+    pub fn isBorrowed(self: *Self) bool {
+        return self.__repr.isBorrowed();
+    }
+
+    pub fn isOwned(self: *Self) bool {
+        return self.__repr.isOwned();
+    }
+
+    pub inline fn borrow(self: *Self) []const u8 {
+        return @as([*]const u8, @ptrCast(self.__repr.ptr(u8)))[0..self.len];
+    }
+
+    pub inline fn borrowMutAssumeOwned(self: *Self) []u8 {
+        assert(self.isOwned());
+        return @as([*]u8, @ptrCast(self.__repr.ptr(u8)))[0..self.len];
+    }
+
+    pub fn borrowMut(self: *Self) Allocator.Error![]u8 {
+        if (self.isOwned()) return self.borrowMutAssumeOwned();
+        const copy = try self.alloc.dupe(u8, self.borrow);
+        self.__repr = Repr.new(copy.ptr, .Owned);
+        self.len = copy.len;
+        return copy;
+    }
+
+    pub fn deinit(self: *Self) void {
+        if (self.isBorrowed()) return;
+        self.alloc.free(self.borrowMutAssumeOwned());
+    }
+};
+
+fn BooGeneric(comptime T: type) type {
     return struct {
         /// **DO NOT ACCESS THIS DIRECTLY**
         ///
@@ -216,15 +303,15 @@ test "null initialization" {
     try expect(boo.__repr.isBorrowed());
 }
 
-// test "new borrowed from static string" {
-//     const alloc = std.testing.allocator;
-//     var boo = Boo([]const u8).static(alloc, @ptrCast(@alignCast("I'm a static string")));
-//     // var boo = Boo([]const u8).static(alloc, @alignCast("I'm a static string"));
-//     try expect(boo.isBorrowed());
-//     const b = boo.borrow();
-//     try std.testing.expectEqualStrings(std.mem.sliceTo("I'm a static string", 0), b);
-//     boo.deinit(); // should be a no-op
-// }
+test "new borrowed from static string" {
+    const alloc = std.testing.allocator;
+    var boo = Boo([]const u8).static(alloc, @ptrCast(@alignCast("I'm a static string")));
+    // var boo = Boo([]const u8).static(alloc, @alignCast("I'm a static string"));
+    try expect(boo.isBorrowed());
+    const b = boo.borrow();
+    try std.testing.expectEqualStrings(std.mem.sliceTo("I'm a static string", 0), b);
+    boo.deinit(); // should be a no-op
+}
 
 // test "mutating a statically-initialized string Boo" {
 //     const alloc = std.testing.allocator;
