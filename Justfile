@@ -19,6 +19,9 @@ fmt:
     zig fmt src build.zig build.zig.zon
     typos -w
 
+clean:
+    rm -rf zig-out .zig-cache
+
 watch cmd="check":
     git ls-files | entr -c just run-clear {{cmd}}
 
