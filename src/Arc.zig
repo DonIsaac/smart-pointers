@@ -88,7 +88,7 @@ pub fn Arc(comptime T: type) type {
     const info = @typeInfo(T);
 
     switch (info) {
-        inline .Fn, .Void, .NoReturn, .Null, .EnumLiteral, .Undefined => {
+        inline .@"fn", .@"void", .@"noreturn", .@"null", .@"enum", .@"undefined" => {
             @compileError("Arc(T) does not support " ++ @typeName(T) ++ " as a valid type for T.\n");
         },
         else => {},
@@ -206,6 +206,7 @@ fn ArcInner(comptime T: type) type {
     };
 }
 
+const t = std.testing;
 const expectEqual = std.testing.expectEqual;
 // NOTE: the `test Arc` block is used by zig docs as an example, so we make it look pretty.
 
@@ -245,7 +246,7 @@ test "Art strong ref counts" {
 }
 
 test "Arc.borrowMut" {
-    var ptr = try Arc(u32).init(std.testing.allocator, 10);
+    var ptr = try Arc(u32).init(t.allocator, 10);
     defer ptr.deinit();
     try expectEqual(10, ptr.derefMut().?.*);
 
@@ -263,13 +264,13 @@ test "Arc.deinit on primitives" {
     const values: Primitives = .{ 1, 0, 0.01, true };
 
     inline for (values) |value| {
-        var x = try Arc(@TypeOf(value)).init(std.testing.allocator, value);
+        var x = try Arc(@TypeOf(value)).init(t.allocator, value);
         x.deinit();
     }
 }
 
 test "Arc.deinit on primitive slices" {
-    const allocator = std.testing.allocator;
+    const allocator = t.allocator;
     const Slices = std.meta.Tuple(&.{
         []const u8,
         ?[]const u8,
@@ -277,6 +278,7 @@ test "Arc.deinit on primitive slices" {
         []u8,
         ?[]u8,
         ?[]u8,
+        [:0]u8,
     });
     const values: Slices = .{
         "I'm a static string",
@@ -285,6 +287,7 @@ test "Arc.deinit on primitive slices" {
         try allocator.dupe(u8, "I'm a heap-allocated string"),
         try allocator.dupe(u8, "I'm an optional heap-allocated string"),
         null,
+        try allocator.dupeZ(u8, "I'm a heap-allocated 0-terminated string"),
     };
 
     inline for (values) |value| {
@@ -292,6 +295,13 @@ test "Arc.deinit on primitive slices" {
         var ptr = try Arc(T).init(allocator, value);
         ptr.deinit();
     }
+}
+test "Arc.deinit on allocated constant slice" {
+    const foo = try t.allocator.dupe(u8, "foo");
+    defer t.allocator.free(foo);
+
+    var ptr = try Arc([]const u8).init(t.allocator, foo);
+    defer ptr.deinit(); // does not free the slice
 }
 
 const Foo = struct {

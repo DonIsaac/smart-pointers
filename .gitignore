@@ -9,3 +9,4 @@ zig-out
 *.swp
 *.swo
 .idea
+.vscode/settings.json

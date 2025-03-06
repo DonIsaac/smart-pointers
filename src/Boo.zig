@@ -32,7 +32,7 @@ pub fn Boo(comptime T: type) type {
 
         const Self = @This();
         const info = @typeInfo(T);
-        const is_optional = info == .Optional;
+        const is_optional = info == .optional;
         const slice_ty: ?type = brk: {
             var ty = info;
             while (true) {

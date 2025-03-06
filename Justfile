@@ -3,6 +3,7 @@ set shell := ["bash", "-cu"]
 
 alias c  := check
 alias ck := check
+alias b  := build
 alias f  := fmt
 alias t  := test
 
