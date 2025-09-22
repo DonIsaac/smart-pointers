@@ -54,5 +54,5 @@ pub fn build(b: *std.Build) void {
     // check
     const check = b.step("check", "Check for semantic issues");
     check.dependOn(b.getInstallStep()); // build library
-    check.dependOn(&run_unit_tests.step); // run tests
+    check.dependOn(&unit_tests.step); // run tests
 }
