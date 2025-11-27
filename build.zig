@@ -15,18 +15,15 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "smart-pointers",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
+    const module = b.addModule("smart-pointers", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
-    _ = b.addModule("smart-pointers", .{
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
+
+    const lib = b.addLibrary(.{
+        .name = "smart-pointers",
+        .root_module = module,
     });
 
     // This declares intent for the library to be installed into the standard
@@ -36,11 +33,7 @@ pub fn build(b: *std.Build) void {
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
-    const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
+    const unit_tests = b.addTest(.{ .root_module = module });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
     b.installArtifact(unit_tests);
@@ -64,21 +57,8 @@ pub fn build(b: *std.Build) void {
 
     // check
     {
-        const lib_check = b.addStaticLibrary(.{
-            .name = "smart-pointers",
-            // In this case the main source file is merely a path, however, in more
-            // complicated build scripts, this could be a generated file.
-            .root_source_file = b.path("src/root.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-        const test_check = b.addTest(.{
-            .root_source_file = b.path("src/root.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
         const check = b.step("check", "Check for semantic issues");
-        check.dependOn(&lib_check.step);
-        check.dependOn(&test_check.step);
+        check.dependOn(&lib.step);
+        check.dependOn(&unit_tests.step);
     }
 }
