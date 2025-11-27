@@ -21,7 +21,7 @@ pub fn Dst(comptime options: Options) type {
             len: Len,
             header: Header,
         };
-        const alignment = @max(@alignOf(Frontmatter), @alignOf(options.T));
+        const alignment: std.mem.Alignment = .fromByteUnits(@max(@alignOf(Frontmatter), @alignOf(options.T)));
 
         const Self = @This();
 
@@ -74,7 +74,7 @@ pub fn Dst(comptime options: Options) type {
         }
 
         pub fn deinit(self: *Self, allocator: Allocator) void {
-            const raw_bytes: [*]align(alignment) u8 = @alignCast(@ptrCast(self));
+            const raw_bytes: [*]align(alignment.toByteUnits()) u8 = @alignCast(@ptrCast(self));
             const slice_ = raw_bytes[0..bytelen(self.size())];
             allocator.free(slice_);
         }
