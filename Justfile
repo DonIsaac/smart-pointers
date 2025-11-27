@@ -14,7 +14,7 @@ check:
     zig build check -freference-trace
 
 build:
-    zig build --summary all -freference-trace --femit-docs
+    zig build --summary all -freference-trace
 
 test:
     zig build test --summary all -freference-trace
