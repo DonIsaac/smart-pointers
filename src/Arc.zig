@@ -3,7 +3,7 @@ const typeUtils = @import("type_utils.zig");
 
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
-const Type = std.builtin.Type;
+const Type = std.lang.Type;
 
 const AtomicU32 = std.atomic.Value(u32);
 
@@ -88,7 +88,7 @@ pub fn Arc(comptime T: type) type {
     const info = @typeInfo(T);
 
     switch (info) {
-        inline .@"fn", .@"void", .@"noreturn", .@"null", .@"enum", .@"undefined" => {
+        inline .@"fn", .void, .noreturn, .null, .@"enum", .undefined => {
             @compileError("Arc(T) does not support " ++ @typeName(T) ++ " as a valid type for T.\n");
         },
         else => {},
@@ -260,7 +260,7 @@ test "Arc.borrowMut" {
 }
 
 test "Arc.deinit on primitives" {
-    const Primitives = std.meta.Tuple(&.{ u32, ?u32, f32, bool });
+    const Primitives = @Tuple(&.{ u32, ?u32, f32, bool });
     const values: Primitives = .{ 1, 0, 0.01, true };
 
     inline for (values) |value| {
@@ -271,7 +271,7 @@ test "Arc.deinit on primitives" {
 
 test "Arc.deinit on primitive slices" {
     const allocator = t.allocator;
-    const Slices = std.meta.Tuple(&.{
+    const Slices = @Tuple(&.{
         []const u8,
         ?[]const u8,
         ?[]const u8,
@@ -287,7 +287,7 @@ test "Arc.deinit on primitive slices" {
         try allocator.dupe(u8, "I'm a heap-allocated string"),
         try allocator.dupe(u8, "I'm an optional heap-allocated string"),
         null,
-        try allocator.dupeZ(u8, "I'm a heap-allocated 0-terminated string"),
+        try allocator.dupeSentinel(u8, "I'm a heap-allocated 0-terminated string", 0),
     };
 
     inline for (values) |value| {

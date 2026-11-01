@@ -23,7 +23,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 env:
-  ZIG_VERSION: 0.15.1
+  ZIG_VERSION: 0.17.0
 
 jobs:
   check:

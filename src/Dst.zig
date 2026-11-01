@@ -9,7 +9,7 @@ const Options = struct {
 
 /// A dynamically sized type containing a slice of data and prefixed with a
 /// header.
-/// 
+///
 /// DSTs are always heap allocated.
 pub fn Dst(comptime options: Options) type {
     return opaque {
@@ -43,7 +43,7 @@ pub fn Dst(comptime options: Options) type {
             const alloc_size = @sizeOf(Frontmatter) + (data.len * @sizeOf(options.T));
             // const nbytes = @
             const bytes = try allocator.alignedAlloc(u8, alignment, alloc_size);
-            const frontmatter_bytes: [*]const u8 = @alignCast(@ptrCast(&frontmatter));
+            const frontmatter_bytes: [*]const u8 = @ptrCast(@alignCast(&frontmatter));
             @memcpy(bytes[0..@sizeOf(Frontmatter)], frontmatter_bytes);
             @memcpy(bytes[@sizeOf(Frontmatter)..], data);
             return @ptrCast(bytes);
@@ -52,12 +52,12 @@ pub fn Dst(comptime options: Options) type {
         /// The number of elements stored in the DST. This is equivalent to,
         /// but faster than, calling `dst.slice().len`.
         pub fn size(self: *const Self) Len {
-            const frontmatter: *const Frontmatter = @alignCast(@ptrCast(self));
+            const frontmatter: *const Frontmatter = @ptrCast(@alignCast(self));
             return frontmatter.len;
         }
 
         pub fn header(self: *Self) *Header {
-            const frontmatter: *Frontmatter = @alignCast(@ptrCast(self));
+            const frontmatter: *Frontmatter = @ptrCast(@alignCast(self));
             return &frontmatter.header;
         }
 
@@ -74,7 +74,7 @@ pub fn Dst(comptime options: Options) type {
         }
 
         pub fn deinit(self: *Self, allocator: Allocator) void {
-            const raw_bytes: [*]align(alignment.toByteUnits()) u8 = @alignCast(@ptrCast(self));
+            const raw_bytes: [*]align(alignment.toByteUnits()) u8 = @ptrCast(@alignCast(self));
             const slice_ = raw_bytes[0..bytelen(self.size())];
             allocator.free(slice_);
         }
