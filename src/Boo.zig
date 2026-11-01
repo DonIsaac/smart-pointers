@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const typeUtils = @import("type_utils.zig");
 
 const Allocator = std.mem.Allocator;
-const Type = std.builtin.Type;
+const Type = std.lang.Type;
 const assert = std.debug.assert;
 
 /// A smart pointer to borrow or owned data. This is akin to Rust's
@@ -228,7 +228,7 @@ test "null initialization" {
 
 // test "mutating a statically-initialized string Boo" {
 //     const alloc = std.testing.allocator;
-//     const owned: [:0]u8 = try alloc.dupeZ(u8, "I'm an owned string");
+//     const owned: [:0]u8 = try alloc.dupeSentinel(u8, "I'm an owned string", 0);
 //     var boo = Boo([:0]const u8).newBorrowed(std.testing.allocator, &std.mem.sliceTo("I'm a static string", 0));
 //     defer boo.deinit();
 //     // mutably borrowing the string forces an allocation

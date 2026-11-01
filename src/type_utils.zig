@@ -1,5 +1,5 @@
 const std = @import("std");
-const Type = std.builtin.Type;
+const Type = std.lang.Type;
 const Allocator = std.mem.Allocator;
 
 pub fn innerType(comptime T: type) Type {
@@ -49,7 +49,7 @@ pub fn deinitInner(comptime T: type, target: *T, alloc: Allocator) void {
 }
 
 fn deinitPtr(comptime ptr: Type.Pointer, target: anytype, alloc: Allocator) void {
-    if (ptr.is_const) return;
+    if (ptr.attrs.@"const") return;
 
     if (ptr.size == .slice) {
         alloc.free(target);
